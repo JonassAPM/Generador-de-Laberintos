@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Laberintos</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="labyrinth_99407.ico" />
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Generador de Laberintos</h1>
+            <p>Crea y resuelve laberintos personalizados by JONASS_APM</p>
+            <p>"Selecciona el inicio del laberinto (bloque color verde) y arrastra el cursor o simplemente haz que se resuelva automáticamente"</p>
+        </div>
+        
+        <div class="controles">
+            <div class="control-group">
+                <label for="ancho">Ancho:</label>
+                <input type="number" id="ancho" class="control-input" value="20" min="10" max="100">
+            </div>
+            
+            <div class="control-group">
+                <label for="alto">Alto:</label>
+                <input type="number" id="alto" class="control-input" value="20" min="10" max="100">
+            </div>
+            
+            <div class="anclar-control">
+                <input type="checkbox" id="anclarDimensiones" checked>
+                <label for="anclarDimensiones">Anclar</label>
+            </div>
+
+            <button id="generarBtn" class="btn btn-primary">Generar</button>
+            <button id="resolverBtn" class="btn btn-success">Resolver</button>
+            <button id="descargarBtn" class="btn btn-download">Descargar Imágenes</button>
+
+            <div class="velocidad-control">
+                <label for="velocidadSlider">Velocidad:</label>
+                <input type="range" id="velocidadSlider" min="1" max="100" value="20" step="1">
+                <span id="velocidadValor">20 ms</span>
+            </div>
+        </div>
+        
+        <div id="laberinto-container"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
