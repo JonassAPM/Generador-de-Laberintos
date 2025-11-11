@@ -18,31 +18,56 @@
         <div class="controles">
             <div class="control-group">
                 <label for="ancho">Ancho:</label>
-                <input type="number" id="ancho" class="control-input" value="20" min="10" max="100">
+                <input type="number" id="ancho" class="control-input" value="20" min="5" max="100">
             </div>
             
             <div class="control-group">
                 <label for="alto">Alto:</label>
-                <input type="number" id="alto" class="control-input" value="20" min="10" max="100">
+                <input type="number" id="alto" class="control-input" value="20" min="5" max="100">
             </div>
             
             <div class="anclar-control">
                 <input type="checkbox" id="anclarDimensiones" checked>
-                <label for="anclarDimensiones">Anclar</label>
+                <label for="anclarDimensiones">Anchar</label>
             </div>
 
             <button id="generarBtn" class="btn btn-primary">Generar</button>
             <button id="resolverBtn" class="btn btn-success">Resolver</button>
-            <button id="descargarBtn" class="btn btn-download">Descargar Imágenes</button>
 
             <div class="velocidad-control">
                 <label for="velocidadSlider">Velocidad:</label>
                 <input type="range" id="velocidadSlider" min="1" max="100" value="20" step="1">
                 <span id="velocidadValor">20 ms</span>
             </div>
+
+            <button id="descargarBtn" class="btn btn-download">Descargar Imágenes</button>
+            <button id="togglePantallaBtn" class="btn btn-fullscreen">Pantalla Completa</button>
+            <div class="cronometro-control">
+                <span class="cronometro-label">Tiempo:</span>
+                <span id="cronometroNormal" class="cronometro-normal">00:00</span>
+            </div>
         </div>
         
         <div id="laberinto-container"></div>
+
+        <div id="panel-pantalla-completa" class="panel-pantalla-completa">
+            <div class="panel-contenido">
+                <div class="panel-item">
+                    <span class="panel-label">Tiempo:</span>
+                    <span id="cronometro" class="cronometro">00:00</span>
+                </div>
+                
+                <div class="panel-item">
+                    <span class="panel-label">Zoom:</span>
+                    <input type="range" id="zoomSlider" min="100" max="500" value="100" step="1">
+                    <span id="zoomValor" class="zoom-valor">100%</span>
+                </div>
+                
+                <button id="salirPantallaCompletaBtn" class="btn btn-salir">
+                    Salir Pantalla Completa
+                </button>
+            </div>
+        </div>
     </div>
     <script src="script.js"></script>
 </body>

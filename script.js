@@ -8,10 +8,36 @@ document.addEventListener('DOMContentLoaded', () => {
     const velocidadSlider = document.getElementById('velocidadSlider');
     const velocidadValor = document.getElementById('velocidadValor');
     const descargarBtn = document.getElementById('descargarBtn');
+    const togglePantallaBtn = document.getElementById('togglePantallaBtn');
+    const salirPantallaCompletaBtn = document.getElementById('salirPantallaCompletaBtn');
+    const zoomSlider = document.getElementById('zoomSlider');
+    const zoomValor = document.getElementById('zoomValor');
+    const cronometro = document.getElementById('cronometro');
+    const cronometroNormal = document.getElementById('cronometroNormal'); // Nuevo cronómetro
 
-    // Variables para guardar los valores anteriores
     let ultimoAncho = anchoInput.value;
     let ultimoAlto = altoInput.value;
+    let laberintoMaximizado = false;
+    let tiempoInicio = null;
+    let intervalo = null;
+    let zoomActual = 100;
+    let laberintoActual = null;
+    let cronometroActivo = false;
+
+    let matriz = [];
+    let pila = [];
+    let anchoSolicitado, altoSolicitado;
+    let anchoTotal, altoTotal;
+    let resolviendo = false;
+    let dibujando = false;
+    let celdasVisitadas = new Set();
+    let mapaDependencias = new Map();
+    
+    // Variables para controlar la animación de resolución
+    let animacionActiva = false;
+    let caminoAnimacion = [];
+    let indiceAnimacion = 0;
+    let timeoutAnimacion = null;
 
     function sincronizarDesdeAncho() {
         if (anclarCheckbox.checked) {
@@ -27,10 +53,432 @@ document.addEventListener('DOMContentLoaded', () => {
         ultimoAlto = altoInput.value;
     }
 
+    function togglePantallaLaberinto() {
+        if (resolviendo) return; // No permitir cambiar durante la resolución
+        
+        if (laberintoMaximizado) {
+            salirModoPantallaCompleta();
+        } else {
+            entrarModoPantallaCompleta();
+        }
+    }
+
+    function entrarModoPantallaCompleta() {
+        guardarEstadoLaberinto();
+        
+        container.classList.add('laberinto-maximizado');
+        document.body.classList.add('laberinto-maximizado-active');
+        laberintoMaximizado = true;
+        
+        setTimeout(() => {
+            regenerarLaberintoDesdeDatos(true);
+        }, 100);
+    }
+
+    function salirModoPantallaCompleta() {
+        // GUARDAR ESTADO ACTUAL ANTES DE SALIR
+        guardarEstadoLaberinto();
+        
+        container.classList.remove('laberinto-maximizado');
+        container.classList.remove('laberinto-con-scroll');
+        document.body.classList.remove('laberinto-maximizado-active');
+        laberintoMaximizado = false;
+        
+        // Restaurar estado del laberinto
+        setTimeout(() => {
+            regenerarLaberintoDesdeDatos(false);
+        }, 100);
+    }
+
+    function guardarEstadoLaberinto() {
+        // Si no hay matriz creada, no hay nada que guardar
+        if (!matriz.length) return;
+        
+        const estadoCeldas = [];
+        for (let i = 0; i < altoTotal; i++) {
+            const fila = [];
+            for (let j = 0; j < anchoTotal; j++) {
+                const celda = matriz[i][j];
+                fila.push({
+                    tipo: celda.tipo,
+                    usuarioVisitado: celda.usuarioVisitado,
+                    clases: Array.from(celda.domElement.classList),
+                    visitado: celda.visitado
+                });
+            }
+            estadoCeldas.push(fila);
+        }
+        
+        laberintoActual = {
+            estadoCeldas,
+            anchoSolicitado,
+            altoSolicitado,
+            anchoTotal,
+            altoTotal,
+            celdasVisitadas: Array.from(celdasVisitadas),
+            mapaDependencias: Array.from(mapaDependencias.entries()),
+            tiempoInicio: tiempoInicio,
+            cronometroActivo: cronometroActivo,
+            tiempoTranscurrido: cronometroActivo ? Date.now() - tiempoInicio : 0,
+            // Guardar estado de la animación
+            resolviendo: resolviendo,
+            animacionActiva: animacionActiva,
+            caminoAnimacion: animacionActiva ? caminoAnimacion : [],
+            indiceAnimacion: animacionActiva ? indiceAnimacion : 0
+        };
+    }
+
+    function regenerarLaberintoDesdeDatos(modoMaximizado) {
+        if (!laberintoActual) return;
+        
+        container.innerHTML = '';
+        
+        matriz = [];
+        anchoSolicitado = laberintoActual.anchoSolicitado;
+        altoSolicitado = laberintoActual.altoSolicitado;
+        anchoTotal = laberintoActual.anchoTotal;
+        altoTotal = laberintoActual.altoTotal;
+        celdasVisitadas = new Set(laberintoActual.celdasVisitadas);
+        mapaDependencias = new Map(laberintoActual.mapaDependencias);
+        
+        // Restaurar estado de resolución
+        resolviendo = laberintoActual.resolviendo || false;
+        animacionActiva = laberintoActual.animacionActiva || false;
+        caminoAnimacion = laberintoActual.caminoAnimacion || [];
+        indiceAnimacion = laberintoActual.indiceAnimacion || 0;
+        
+        if (laberintoActual.cronometroActivo) {
+            tiempoInicio = Date.now() - laberintoActual.tiempoTranscurrido;
+            cronometroActivo = true;
+            iniciarCronometro();
+        } else {
+            // Actualizar ambos cronómetros al tiempo guardado
+            const tiempoTranscurrido = laberintoActual.tiempoTranscurrido || 0;
+            const minutos = Math.floor(tiempoTranscurrido / 60000);
+            const segundos = Math.floor((tiempoTranscurrido % 60000) / 1000);
+            const tiempoTexto = `${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+            cronometro.textContent = tiempoTexto;
+            cronometroNormal.textContent = tiempoTexto;
+        }
+        
+        let tamanoCelda;
+        
+        if (modoMaximizado) {
+            const anchoDisponible = window.innerWidth;
+            const altoDisponible = window.innerHeight - 60;
+            const tamanoCeldaHorizontal = anchoDisponible / anchoTotal;
+            const tamanoCeldaVertical = altoDisponible / altoTotal;
+            tamanoCelda = Math.min(tamanoCeldaHorizontal, tamanoCeldaVertical);
+            tamanoCelda = Math.max(2, tamanoCelda);
+        } else {
+            const porcentajeAncho = 0.9;
+            const porcentajeAlto = 0.80;
+            const anchoDisponible = window.innerWidth * porcentajeAncho;
+            const altoDisponible = (window.innerHeight - 200) * porcentajeAlto;
+            const tamanoCeldaHorizontal = anchoDisponible / anchoTotal;
+            const tamanoCeldaVertical = altoDisponible / altoTotal;
+            tamanoCelda = Math.min(tamanoCeldaHorizontal, tamanoCeldaVertical);
+            tamanoCelda = Math.max(2, tamanoCelda);
+        }
+
+        container.style.gridTemplateColumns = `repeat(${anchoTotal}, ${tamanoCelda}px)`;
+        container.style.gridAutoRows = `${tamanoCelda}px`;
+        container.style.width = `${anchoTotal * tamanoCelda}px`;
+        container.style.height = `${altoTotal * tamanoCelda}px`;
+        container.style.overflow = modoMaximizado ? 'hidden' : 'hidden';
+
+        for (let i = 0; i < altoTotal; i++) {
+            const fila = [];
+            for (let j = 0; j < anchoTotal; j++) {
+                const celdaData = laberintoActual.estadoCeldas[i][j];
+                const celdaDOM = document.createElement('div');
+                celdaDOM.classList.add('celda');
+                
+                // Restaurar todas las clases
+                celdaData.clases.forEach(clase => {
+                    if (clase !== 'celda') { // Evitar duplicar la clase base
+                        celdaDOM.classList.add(clase);
+                    }
+                });
+                
+                // Asegurar que el tipo de celda sea correcto
+                if (celdaData.tipo === 1 && !celdaDOM.classList.contains('muro')) {
+                    celdaDOM.classList.add('muro');
+                } else if (celdaData.tipo === 0 && celdaDOM.classList.contains('muro')) {
+                    celdaDOM.classList.remove('muro');
+                }
+                
+                celdaDOM.addEventListener('mousedown', manejarMouseDown);
+                celdaDOM.addEventListener('mouseenter', manejarMouseEnter);
+                celdaDOM.addEventListener('mouseup', manejarMouseUp);
+                
+                container.appendChild(celdaDOM);
+                
+                fila.push({
+                    fila: i,
+                    col: j,
+                    tipo: celdaData.tipo,
+                    visitado: celdaData.visitado,
+                    domElement: celdaDOM,
+                    usuarioVisitado: celdaData.usuarioVisitado
+                });
+            }
+            matriz.push(fila);
+        }
+        
+        // Actualizar estado de los botones
+        actualizarEstadoBotones();
+        
+        // Si había una animación activa, reanudarla
+        if (animacionActiva && caminoAnimacion.length > 0 && indiceAnimacion < caminoAnimacion.length) {
+            setTimeout(() => {
+                reanudarAnimacionCamino();
+            }, 100);
+        }
+    }
+
+    function actualizarEstadoBotones() {
+        // Actualizar estado de todos los botones según si se está resolviendo o no
+        resolverBtn.disabled = resolviendo;
+        generarBtn.disabled = resolviendo;
+        togglePantallaBtn.disabled = resolviendo;
+        
+        if (resolviendo) {
+            togglePantallaBtn.classList.add('btn-disabled');
+        } else {
+            togglePantallaBtn.classList.remove('btn-disabled');
+        }
+    }
+
+    function reanudarAnimacionCamino() {
+        if (!animacionActiva || !caminoAnimacion.length) return;
+        
+        // Continuar desde donde se quedó
+        function siguientePaso() {
+            if (indiceAnimacion >= caminoAnimacion.length || !animacionActiva) {
+                // Animación completada
+                animacionActiva = false;
+                resolviendo = false;
+                actualizarEstadoBotones();
+                detenerCronometro();
+                if (indiceAnimacion >= caminoAnimacion.length) {
+                    alert('¡Solucionado!');
+                }
+                return;
+            }
+
+            const celda = caminoAnimacion[indiceAnimacion];
+            if (!celda.domElement.classList.contains('inicio') &&
+                !celda.domElement.classList.contains('fin')) {
+                celda.domElement.classList.add('camino');
+            }
+            
+            indiceAnimacion++;
+
+            const area = anchoSolicitado * altoSolicitado;
+            const factorVelocidad = Math.max(0.1, Math.min(1, 1000 / area));
+            const velocidadUsuario = parseInt(velocidadSlider.value);
+            const delay = Math.max(1, Math.floor(velocidadUsuario * factorVelocidad));
+
+            timeoutAnimacion = setTimeout(siguientePaso, delay);
+        }
+
+        siguientePaso();
+    }
+
+    function detenerAnimacion() {
+        animacionActiva = false;
+        if (timeoutAnimacion) {
+            clearTimeout(timeoutAnimacion);
+            timeoutAnimacion = null;
+        }
+    }
+
+    function ajustarLaberintoMaximizado() {
+        if (!laberintoMaximizado) return;
+        
+        const anchoDisponible = window.innerWidth;
+        const altoDisponible = window.innerHeight - 60;
+        
+        const tamanoCeldaHorizontal = anchoDisponible / anchoTotal;
+        const tamanoCeldaVertical = altoDisponible / altoTotal;
+        
+        let tamanoCelda = Math.min(tamanoCeldaHorizontal, tamanoCeldaVertical);
+        tamanoCelda = Math.max(2, tamanoCelda);
+        
+        container.style.gridTemplateColumns = `repeat(${anchoTotal}, ${tamanoCelda}px)`;
+        container.style.gridAutoRows = `${tamanoCelda}px`;
+        container.style.width = `${anchoTotal * tamanoCelda}px`;
+        container.style.height = `${altoTotal * tamanoCelda}px`;
+    }
+
+    function iniciarCronometro() {
+        if (cronometroActivo) return;
+        
+        tiempoInicio = Date.now();
+        cronometroActivo = true;
+        detenerCronometro();
+        
+        intervalo = setInterval(() => {
+            const tiempoTranscurrido = Date.now() - tiempoInicio;
+            const minutos = Math.floor(tiempoTranscurrido / 60000);
+            const segundos = Math.floor((tiempoTranscurrido % 60000) / 1000);
+            const tiempoTexto = `${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
+            
+            // Actualizar ambos cronómetros simultáneamente
+            cronometro.textContent = tiempoTexto;
+            cronometroNormal.textContent = tiempoTexto;
+        }, 1000);
+    }
+
+    function detenerCronometro() {
+        if (intervalo) {
+            clearInterval(intervalo);
+            intervalo = null;
+        }
+    }
+
+    function aplicarZoom() {
+        const factorZoom = zoomActual / 100;
+        
+        if (zoomActual > 100) {
+            container.classList.add('laberinto-con-scroll');
+            const tamanoCeldaBase = calcularTamanoCeldaBase();
+            const nuevoTamano = Math.max(2, tamanoCeldaBase * factorZoom);
+            
+            container.style.gridTemplateColumns = `repeat(${anchoTotal}, ${nuevoTamano}px)`;
+            container.style.gridAutoRows = `${nuevoTamano}px`;
+            container.style.width = `${anchoTotal * nuevoTamano}px`;
+            container.style.height = `${altoTotal * nuevoTamano}px`;
+        } else {
+            container.classList.remove('laberinto-con-scroll');
+            if (laberintoMaximizado) {
+                ajustarLaberintoMaximizado();
+            } else {
+                const tamanoCeldaBase = calcularTamanoCeldaBase();
+                container.style.gridTemplateColumns = `repeat(${anchoTotal}, ${tamanoCeldaBase}px)`;
+                container.style.gridAutoRows = `${tamanoCeldaBase}px`;
+                container.style.width = `${anchoTotal * tamanoCeldaBase}px`;
+                container.style.height = `${altoTotal * tamanoCeldaBase}px`;
+            }
+        }
+    }
+
+    function calcularTamanoCeldaBase() {
+        if (laberintoMaximizado) {
+            const anchoDisponible = window.innerWidth;
+            const altoDisponible = window.innerHeight - 60;
+            const tamanoCeldaHorizontal = anchoDisponible / anchoTotal;
+            const tamanoCeldaVertical = altoDisponible / altoTotal;
+            return Math.min(tamanoCeldaHorizontal, tamanoCeldaVertical);
+        } else {
+            const porcentajeAncho = 0.9;
+            const porcentajeAlto = 0.75;
+            const anchoDisponible = window.innerWidth * porcentajeAncho;
+            const altoDisponible = (window.innerHeight - 200) * porcentajeAlto;
+            const tamanoCeldaHorizontal = anchoDisponible / anchoTotal;
+            const tamanoCeldaVertical = altoDisponible / altoTotal;
+            return Math.min(tamanoCeldaHorizontal, tamanoCeldaVertical);
+        }
+    }
+
+    function manejarInputZoom() {
+        const nuevoZoom = parseInt(zoomSlider.value);
+        
+        if (nuevoZoom < 100) {
+            zoomSlider.value = 100;
+            zoomActual = 100;
+        } else if (nuevoZoom > 500) {
+            zoomSlider.value = 500;
+            zoomActual = 500;
+        } else {
+            zoomActual = nuevoZoom;
+        }
+        
+        zoomValor.textContent = `${zoomActual}%`;
+        aplicarZoom();
+        
+        if (!cronometroActivo && (celdasVisitadas.size > 1 || dibujando)) {
+            iniciarCronometro();
+        }
+    }
+
+    function manejarInputZoomDirecto(event) {
+        if (event.key === 'Enter') {
+            const input = event.target;
+            let valor = parseInt(input.value);
+            
+            if (isNaN(valor) || valor < 100) {
+                valor = 100;
+            } else if (valor > 500) {
+                valor = 500;
+            }
+            
+            input.value = valor;
+            zoomSlider.value = valor;
+            zoomActual = valor;
+            zoomValor.textContent = `${valor}%`;
+            aplicarZoom();
+            input.blur();
+        }
+    }
+
+    // Configuración inicial del zoom
+    zoomSlider.value = 100;
+    zoomActual = 100;
+    zoomValor.textContent = '100%';
+
+    // Inicializar ambos cronómetros
+    cronometro.textContent = '00:00';
+    cronometroNormal.textContent = '00:00';
+
+    togglePantallaBtn.addEventListener('click', togglePantallaLaberinto);
+    salirPantallaCompletaBtn.addEventListener('click', salirModoPantallaCompleta);
+
+    zoomSlider.addEventListener('input', manejarInputZoom);
+    
+    zoomValor.addEventListener('click', function() {
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = zoomActual;
+        input.min = 100;
+        input.max = 500;
+        input.style.width = '50px';
+        input.style.border = 'none';
+        input.style.background = 'transparent';
+        input.style.color = 'white';
+        input.style.textAlign = 'center';
+        input.style.fontFamily = 'Courier New, monospace';
+        input.style.fontWeight = '700';
+        
+        this.replaceWith(input);
+        input.focus();
+        input.select();
+        
+        input.addEventListener('keydown', manejarInputZoomDirecto);
+        input.addEventListener('blur', function() {
+            zoomValor.textContent = `${zoomActual}%`;
+            input.replaceWith(zoomValor);
+        });
+    });
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && laberintoMaximizado) {
+            salirModoPantallaCompleta();
+        }
+    });
+
+    window.addEventListener('resize', function() {
+        if (laberintoMaximizado) {
+            ajustarLaberintoMaximizado();
+        } else {
+            aplicarZoom();
+        }
+    });
+
     anchoInput.addEventListener('input', sincronizarDesdeAncho);
     altoInput.addEventListener('input', sincronizarDesdeAlto);
     
-    // Restaurar valores cuando el input pierde el foco
     anchoInput.addEventListener('blur', function() {
         if (!anclarCheckbox.checked && this.value !== ultimoAncho) {
             generarLaberinto();
@@ -50,22 +498,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     descargarBtn.addEventListener('click', descargarImagenes);
 
-    let matriz = [];
-    let pila = [];
-    let anchoSolicitado, altoSolicitado;
-    let anchoTotal, altoTotal;
-    let resolviendo = false;
-    let dibujando = false;
-    let celdasVisitadas = new Set();
-    let mapaDependencias = new Map();
-
     function generarLaberinto() {
+        // Detener cualquier animación en curso
+        detenerAnimacion();
+        
         resolviendo = false;
         dibujando = false;
-        resolverBtn.disabled = false;
-        generarBtn.disabled = false;
+        animacionActiva = false;
+        actualizarEstadoBotones();
         celdasVisitadas.clear();
         mapaDependencias.clear();
+        detenerCronometro();
+        cronometroActivo = false;
+        
+        // Resetear ambos cronómetros
+        cronometro.textContent = '00:00';
+        cronometroNormal.textContent = '00:00';
+        
+        // Resetear zoom
+        zoomActual = 100;
+        zoomSlider.value = 100;
+        zoomValor.textContent = '100%';
         
         const celdasCamino = document.querySelectorAll('.celda.camino, .celda.usuario');
         celdasCamino.forEach(c => {
@@ -73,7 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
             c.classList.remove('usuario');
         });
 
-        const MIN_DIM = 10;
+        const MIN_DIM = 5;
         const MAX_DIM = 100;
 
         let anchoVal = parseInt(anchoInput.value) || MIN_DIM;
@@ -92,13 +545,16 @@ document.addEventListener('DOMContentLoaded', () => {
         altoTotal = altoSolicitado * 2 + 1;
         
         container.innerHTML = '';
+        
         matriz = [];
         pila = [];
         celdasVisitadas.clear();
         mapaDependencias.clear();
+        caminoAnimacion = [];
+        indiceAnimacion = 0;
 
         const porcentajeAncho = 0.9;
-        const porcentajeAlto = 0.80;
+        const porcentajeAlto = 0.75;
         
         const anchoDisponible = window.innerWidth * porcentajeAncho;
         const altoDisponible = (window.innerHeight - 200) * porcentajeAlto;
@@ -175,10 +631,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function manejarMouseDown(event) {
         if (resolviendo) return;
         
+        if (!cronometroActivo) {
+            iniciarCronometro();
+        }
+        
         const celda = encontrarCeldaDesdeElemento(event.target);
         if (celda && celda.tipo === 0 && !celda.domElement.classList.contains('muro')) {
             dibujando = true;
-            if (celda.domElement.classList.contains('usuario') && !celda.domElement.classList.contains('inicio')) {
+            
+            if (celda.domElement.classList.contains('inicio')) {
+                return;
+            }
+            
+            if (celda.domElement.classList.contains('usuario')) {
                 deseleccionarCeldaYHijos(celda);
             } else {
                 if (esCeldaValidaParaUsuario(celda)) {
@@ -193,7 +658,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         const celda = encontrarCeldaDesdeElemento(event.target);
         if (celda && celda.tipo === 0 && !celda.domElement.classList.contains('muro')) {
-            if (celda.domElement.classList.contains('usuario') && !celda.domElement.classList.contains('inicio')) {
+            if (celda.domElement.classList.contains('inicio')) {
+                return;
+            }
+            
+            if (celda.domElement.classList.contains('usuario')) {
                 deseleccionarCeldaYHijos(celda);
             } else {
                 if (!celda.domElement.classList.contains('usuario') && esCeldaValidaParaUsuario(celda)) {
@@ -273,7 +742,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function esCeldaValidaParaUsuario(celda) {
-        if (celda.domElement.classList.contains('inicio')) return true;
+        if (celda.domElement.classList.contains('inicio')) return false;
         
         const vecinos = obtenerVecinosValidos(celda);
         for (const vecino of vecinos) {
@@ -293,6 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function verificarVictoria() {
         const fin = matriz[altoTotal - 2][anchoTotal - 2];
         if (fin.usuarioVisitado) {
+            detenerCronometro();
             setTimeout(() => {
                 alert('¡Felicidades! Has resuelto el laberinto.');
                 dibujando = false;
@@ -340,8 +810,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (resolviendo) return;
         resolviendo = true;
         dibujando = false;
-        generarBtn.disabled = true;
-        resolverBtn.disabled = true;
+        animacionActiva = true;
+        actualizarEstadoBotones();
+
+        if (!cronometroActivo) {
+            iniciarCronometro();
+        }
 
         const celdasUsuario = document.querySelectorAll('.celda.usuario');
         celdasUsuario.forEach(c => c.classList.remove('usuario'));
@@ -351,12 +825,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const camino = encontrarCaminoBFS();
 
         if (camino.length > 0) {
-            animarCamino(camino);
+            caminoAnimacion = camino;
+            indiceAnimacion = 0;
+            animarCamino();
         } else {
             alert("No se encontró solución.");
             resolviendo = false;
-            generarBtn.disabled = false;
-            resolverBtn.disabled = false;
+            animacionActiva = false;
+            actualizarEstadoBotones();
         }
     }
 
@@ -422,32 +898,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return vecinos;
     }
 
-    function animarCamino(camino) {
-        let i = 0;
-
+    function animarCamino() {
+        if (!animacionActiva) return;
+        
         function siguientePaso() {
-            if (i >= camino.length) {
-                alert('¡Solucionado!');
-                generarBtn.disabled = false;
-                resolverBtn.disabled = false;
+            if (indiceAnimacion >= caminoAnimacion.length || !animacionActiva) {
+                // Animación completada
+                animacionActiva = false;
                 resolviendo = false;
+                actualizarEstadoBotones();
+                detenerCronometro();
+                if (indiceAnimacion >= caminoAnimacion.length) {
+                    alert('¡Solucionado!');
+                }
                 return;
             }
 
-            const celda = camino[i];
+            const celda = caminoAnimacion[indiceAnimacion];
             if (!celda.domElement.classList.contains('inicio') &&
                 !celda.domElement.classList.contains('fin')) {
                 celda.domElement.classList.add('camino');
             }
             
-            i++;
+            indiceAnimacion++;
 
             const area = anchoSolicitado * altoSolicitado;
             const factorVelocidad = Math.max(0.1, Math.min(1, 1000 / area));
             const velocidadUsuario = parseInt(velocidadSlider.value);
             const delay = Math.max(1, Math.floor(velocidadUsuario * factorVelocidad));
 
-            setTimeout(siguientePaso, delay);
+            timeoutAnimacion = setTimeout(siguientePaso, delay);
         }
 
         siguientePaso();
@@ -542,18 +1022,6 @@ document.addEventListener('DOMContentLoaded', () => {
         link.click();
         document.body.removeChild(link);
     }
-
-    window.addEventListener('resize', function() {
-        if (matriz.length > 0) {
-            const currentAncho = anchoSolicitado;
-            const currentAlto = altoSolicitado;
-            
-            anchoInput.value = currentAncho;
-            altoInput.value = currentAlto;
-            
-            generarLaberinto();
-        }
-    });
 
     document.addEventListener('mouseup', manejarMouseUp);
 
