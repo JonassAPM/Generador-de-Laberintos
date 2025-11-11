@@ -672,7 +672,6 @@ body.laberinto-maximizado-active {
     font-size: 0.9rem;
 }
 
-/* Ajustes responsive para el nuevo control */
 @media (max-width: 768px) {
     .cronometro-control {
         padding: 4px 8px;
@@ -693,4 +692,44 @@ body.laberinto-maximizado-active {
     .cronometro-label {
         display: none;
     }
+}
+
+.laberinto-maximizado {
+    position: fixed !important;
+    top: 60px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: auto !important;
+    max-width: 95vw !important;
+    height: calc(100vh - 60px) !important;
+    max-height: calc(100vh - 60px) !important;
+    z-index: 9999;
+    border-radius: 0 !important;
+    border: none !important;
+    background: var(--surface);
+}
+
+.laberinto-maximizado #laberinto-container {
+    margin: 0 auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+@media (min-width: 2000px) {
+    .laberinto-maximizado {
+        max-width: 1800px !important;
+    }
+}
+
+.laberinto-maximizado #laberinto-container {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.laberinto-maximizado #laberinto-container .celda {
+    flex-shrink: 0;
 }

@@ -33,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let celdasVisitadas = new Set();
     let mapaDependencias = new Map();
     
-    // Variables para controlar la animación de resolución
     let animacionActiva = false;
     let caminoAnimacion = [];
     let indiceAnimacion = 0;
@@ -54,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function togglePantallaLaberinto() {
-        if (resolviendo) return; // No permitir cambiar durante la resolución
+        if (resolviendo) return;
         
         if (laberintoMaximizado) {
             salirModoPantallaCompleta();
@@ -76,7 +75,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function salirModoPantallaCompleta() {
-        // GUARDAR ESTADO ACTUAL ANTES DE SALIR
         guardarEstadoLaberinto();
         
         container.classList.remove('laberinto-maximizado');
@@ -84,14 +82,12 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.remove('laberinto-maximizado-active');
         laberintoMaximizado = false;
         
-        // Restaurar estado del laberinto
         setTimeout(() => {
             regenerarLaberintoDesdeDatos(false);
         }, 100);
     }
 
     function guardarEstadoLaberinto() {
-        // Si no hay matriz creada, no hay nada que guardar
         if (!matriz.length) return;
         
         const estadoCeldas = [];
@@ -120,7 +116,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tiempoInicio: tiempoInicio,
             cronometroActivo: cronometroActivo,
             tiempoTranscurrido: cronometroActivo ? Date.now() - tiempoInicio : 0,
-            // Guardar estado de la animación
             resolviendo: resolviendo,
             animacionActiva: animacionActiva,
             caminoAnimacion: animacionActiva ? caminoAnimacion : [],
@@ -141,7 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
         celdasVisitadas = new Set(laberintoActual.celdasVisitadas);
         mapaDependencias = new Map(laberintoActual.mapaDependencias);
         
-        // Restaurar estado de resolución
         resolviendo = laberintoActual.resolviendo || false;
         animacionActiva = laberintoActual.animacionActiva || false;
         caminoAnimacion = laberintoActual.caminoAnimacion || [];
@@ -152,7 +146,6 @@ document.addEventListener('DOMContentLoaded', () => {
             cronometroActivo = true;
             iniciarCronometro();
         } else {
-            // Actualizar ambos cronómetros al tiempo guardado
             const tiempoTranscurrido = laberintoActual.tiempoTranscurrido || 0;
             const minutos = Math.floor(tiempoTranscurrido / 60000);
             const segundos = Math.floor((tiempoTranscurrido % 60000) / 1000);
@@ -193,15 +186,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 const celdaData = laberintoActual.estadoCeldas[i][j];
                 const celdaDOM = document.createElement('div');
                 celdaDOM.classList.add('celda');
-                
-                // Restaurar todas las clases
+
                 celdaData.clases.forEach(clase => {
-                    if (clase !== 'celda') { // Evitar duplicar la clase base
+                    if (clase !== 'celda') {
                         celdaDOM.classList.add(clase);
                     }
                 });
                 
-                // Asegurar que el tipo de celda sea correcto
                 if (celdaData.tipo === 1 && !celdaDOM.classList.contains('muro')) {
                     celdaDOM.classList.add('muro');
                 } else if (celdaData.tipo === 0 && celdaDOM.classList.contains('muro')) {
@@ -226,10 +217,8 @@ document.addEventListener('DOMContentLoaded', () => {
             matriz.push(fila);
         }
         
-        // Actualizar estado de los botones
         actualizarEstadoBotones();
         
-        // Si había una animación activa, reanudarla
         if (animacionActiva && caminoAnimacion.length > 0 && indiceAnimacion < caminoAnimacion.length) {
             setTimeout(() => {
                 reanudarAnimacionCamino();
@@ -238,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function actualizarEstadoBotones() {
-        // Actualizar estado de todos los botones según si se está resolviendo o no
         resolverBtn.disabled = resolviendo;
         generarBtn.disabled = resolviendo;
         togglePantallaBtn.disabled = resolviendo;
@@ -252,11 +240,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function reanudarAnimacionCamino() {
         if (!animacionActiva || !caminoAnimacion.length) return;
-        
-        // Continuar desde donde se quedó
+
         function siguientePaso() {
             if (indiceAnimacion >= caminoAnimacion.length || !animacionActiva) {
-                // Animación completada
+
                 animacionActiva = false;
                 resolviendo = false;
                 actualizarEstadoBotones();
@@ -325,7 +312,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const segundos = Math.floor((tiempoTranscurrido % 60000) / 1000);
             const tiempoTexto = `${minutos.toString().padStart(2, '0')}:${segundos.toString().padStart(2, '0')}`;
             
-            // Actualizar ambos cronómetros simultáneamente
             cronometro.textContent = tiempoTexto;
             cronometroNormal.textContent = tiempoTexto;
         }, 1000);
@@ -423,12 +409,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Configuración inicial del zoom
     zoomSlider.value = 100;
     zoomActual = 100;
     zoomValor.textContent = '100%';
 
-    // Inicializar ambos cronómetros
     cronometro.textContent = '00:00';
     cronometroNormal.textContent = '00:00';
 
@@ -499,7 +483,6 @@ document.addEventListener('DOMContentLoaded', () => {
     descargarBtn.addEventListener('click', descargarImagenes);
 
     function generarLaberinto() {
-        // Detener cualquier animación en curso
         detenerAnimacion();
         
         resolviendo = false;
@@ -511,11 +494,9 @@ document.addEventListener('DOMContentLoaded', () => {
         detenerCronometro();
         cronometroActivo = false;
         
-        // Resetear ambos cronómetros
         cronometro.textContent = '00:00';
         cronometroNormal.textContent = '00:00';
         
-        // Resetear zoom
         zoomActual = 100;
         zoomSlider.value = 100;
         zoomValor.textContent = '100%';
@@ -903,7 +884,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         function siguientePaso() {
             if (indiceAnimacion >= caminoAnimacion.length || !animacionActiva) {
-                // Animación completada
                 animacionActiva = false;
                 resolviendo = false;
                 actualizarEstadoBotones();
