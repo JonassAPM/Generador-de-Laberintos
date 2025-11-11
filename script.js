@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         mapaDependencias.clear();
 
         const porcentajeAncho = 0.9;
-        const porcentajeAlto = 0.85;
+        const porcentajeAlto = 0.80;
         
         const anchoDisponible = window.innerWidth * porcentajeAncho;
         const altoDisponible = (window.innerHeight - 200) * porcentajeAlto;
