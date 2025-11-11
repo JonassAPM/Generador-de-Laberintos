@@ -1,160 +1,49 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Torres de Hanoi</title>
-  <link rel="stylesheet" href="style.css" />
-  <link rel="icon" href="stack_icon_151083.png" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Laberintos</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="labyrinth_99407.ico" />
 </head>
 <body>
-
-  <main class="container">
-    <!-- PRIMERO: Controles -->
-    <section class="controls">
-      <h1>TORRES DE HANOI</h1>
-      <label>by JONASS_APM</label>
-      <div class="counters-wrapper">
-        <div id="minMoveCounterPanel" class="move-counter-min">
-          Movimientos Mínimos: <span id="minMoveCount">0</span>
-        </div>
-        <div id="moveCounterPanel" class="move-counter">
-          Movimientos Realizados: <span id="moveCount">0</span>
-        </div>
-        <div id="timerPanel" class="timer">
-          Tiempo: <span id="timer">00:00</span>
-        </div>
-      </div>
-      <label>
-        Cantidad de discos:
-        <input id="numDiscos" type="number" min="3" max="10" value="4" />
-      </label>
-
-      <div id="colorControls" class="color-controls">
-      </div>
-
-      <div class="buttons-row">
-        <button id="generarBtn">Generar torre</button>
-        <button id="randomColorsBtn">Colores aleatorios</button>
-      </div>
-
-      <div class="autoplay-controls">
-        <label>
-          <h2></h2>
-          Velocidad (ms por movimiento):
-          <input id="speedRange" type="range" min="100" max="1500" value="500" />
-          <span id="speedValue">500</span> ms
-        </label>
-        <div class="buttons-row">
-          <button id="solveBtn">Resolver automáticamente</button>
-          <button id="pauseBtn" disabled>Pausar</button>
-          <button id="resumeBtn" disabled>Reanudar</button>
-          <button id="resetBtn">Reiniciar</button>
-        </div>
-      </div>
-
-      <p class="help">
-        Modo manual: <strong>Arrastra</strong> el disco superior de una pila y <strong>suéltalo</strong> en la pila de destino.
-        No se permiten movimientos ilegales (disco mayor sobre menor).
-      </p>
-
-      <p id="mensaje" class="mensaje"></p>
-    </section>
-
-    <div>
-      <h1></h1>
-    </div>
-
-    <section id="tablero" class="board">
-      <div class="peg" data-peg="0">
-        <div class="peg-label">Pila A</div>
-        <div class="stack" id="stack0"></div>
-      </div>
-      <div class="peg" data-peg="1">
-        <div class="peg-label">Pila B</div>
-        <div class="stack" id="stack1"></div>
-      </div>
-      <div class="peg" data-peg="2">
-        <div class="peg-label">Pila C</div>
-        <div class="stack" id="stack2"></div>
-      </div>
-    </section>
-  </main>
-
-    <div>
-      <h1></h1>
-    </div>
-
-  <div class="container">
-    <section class="controls">
-      <h2>Salón de la Fama</h2>
-      <h3 id="recordsTitle">Top 10 puntajes</h3>
-      
-      <div class="records-controls">
-        <div class="filter-group"> 
-          <label for="recordsDiskFilter">Filtrar por discos:</label>
-          <select id="recordsDiskFilter"></select>
+    <div class="container">
+        <div class="header">
+            <h1>Generador de Laberintos</h1>
+            <p>Crea y resuelve laberintos personalizados by JONASS_APM</p>
+            <p>"Selecciona el inicio del laberinto (bloque color verde) y arrastra el cursor o simplemente haz que se resuelva automáticamente"</p>
         </div>
         
-        <div class="sort-buttons">
-          <button id="sortMovesBtn" class="sort-button active">Ordenar por Movimientos</button>
-          <button id="sortTimeBtn" class="sort-button">Ordenar por Tiempo</button>
+        <div class="controles">
+            <div class="control-group">
+                <label for="ancho">Ancho:</label>
+                <input type="number" id="ancho" class="control-input" value="20" min="10" max="100">
+            </div>
+            
+            <div class="control-group">
+                <label for="alto">Alto:</label>
+                <input type="number" id="alto" class="control-input" value="20" min="10" max="100">
+            </div>
+            
+            <div class="anclar-control">
+                <input type="checkbox" id="anclarDimensiones" checked>
+                <label for="anclarDimensiones">Anclar</label>
+            </div>
+
+            <button id="generarBtn" class="btn btn-primary">Generar</button>
+            <button id="resolverBtn" class="btn btn-success">Resolver</button>
+            <button id="descargarBtn" class="btn btn-download">Descargar Imágenes</button>
+
+            <div class="velocidad-control">
+                <label for="velocidadSlider">Velocidad:</label>
+                <input type="range" id="velocidadSlider" min="1" max="100" value="20" step="1">
+                <span id="velocidadValor">20 ms</span>
+            </div>
         </div>
-        <div class="limit-buttons">
-          <button id="limit10Btn" class="limit-button active">Top 10</button>
-          <button id="limit100Btn" class="limit-button">Top 100</button>
-        </div>
-      </div>
-
-      <table id="recordsTable" class="records-table">
-        <thead>
-          <tr>
-            <th>Pos.</th>
-            <th>Nombre</th>
-            <th>Movimientos</th>
-            <th>Tiempo</th>
-          </tr>
-        </thead>
-        <tbody id="recordsTbody">
-        </tbody>
-      </table>
-    </section>
-  </div>
-
-  <div id="modalVictoria" class="modal-overlay">
-    <div class="modal-content">
-      
-      <h2 id="modalTitle">¡Felicidades!</h2>
-      
-      <p id="modalAutoSolveMsg" class="hide">
-        ¡Solución completada! Los récords no se guardan en el modo automático.
-      </p>
-
-      <div id="modalStatsGroup">
-        <p class="modal-stat">
-          Movimientos: <span id="modalMoveCount">0</span>
-        </p>
-        <p class="modal-stat">
-          Tiempo: <span id="modalTime">00:00</span>
-        </p>
-      </div>
-
-      <div id="modalInputGroup" class="modal-input-group">
-        <label for="modalPlayerName">Ingrese Su Nombre:</label>
-        <input type="text" id="modalPlayerName" placeholder="Ingresa tu nombre">
-        <p id="modalErrorMsg" class="modal-error"></p>
-      </div>
-      
-      <div class="modal-buttons">
-        <button id="modalGuardarBtn">Guardar Puntaje</button>
-        <button id="modalOmitirBtn" class="button-secondary">Omitir</button>
-      </div>
-
+        
+        <div id="laberinto-container"></div>
     </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js"></script>
-
+    <script src="script.js"></script>
 </body>
 </html>
