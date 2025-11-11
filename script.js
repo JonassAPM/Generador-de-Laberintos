@@ -9,20 +9,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const velocidadValor = document.getElementById('velocidadValor');
     const descargarBtn = document.getElementById('descargarBtn');
 
+    // Variables para guardar los valores anteriores
+    let ultimoAncho = anchoInput.value;
+    let ultimoAlto = altoInput.value;
+
     function sincronizarDesdeAncho() {
         if (anclarCheckbox.checked) {
             altoInput.value = anchoInput.value;
         }
+        ultimoAncho = anchoInput.value;
     }
 
     function sincronizarDesdeAlto() {
         if (anclarCheckbox.checked) {
             anchoInput.value = altoInput.value;
         }
+        ultimoAlto = altoInput.value;
     }
 
     anchoInput.addEventListener('input', sincronizarDesdeAncho);
     altoInput.addEventListener('input', sincronizarDesdeAlto);
+    
+    // Restaurar valores cuando el input pierde el foco
+    anchoInput.addEventListener('blur', function() {
+        if (!anclarCheckbox.checked && this.value !== ultimoAncho) {
+            generarLaberinto();
+        }
+    });
+    
+    altoInput.addEventListener('blur', function() {
+        if (!anclarCheckbox.checked && this.value !== ultimoAlto) {
+            generarLaberinto();
+        }
+    });
+
     generarBtn.addEventListener('click', generarLaberinto);
     resolverBtn.addEventListener('click', resolverLaberinto);
     velocidadSlider.addEventListener('input', () => {
@@ -144,6 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 pila.pop();
             }
         }
+
+        ultimoAncho = anchoInput.value;
+        ultimoAlto = altoInput.value;
         
         marcarInicioYFin();
         iniciarCeldaInicio();
