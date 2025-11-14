@@ -13,7 +13,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const zoomSlider = document.getElementById('zoomSlider');
     const zoomValor = document.getElementById('zoomValor');
     const cronometro = document.getElementById('cronometro');
-    const cronometroNormal = document.getElementById('cronometroNormal'); // Nuevo cronómetro
+    const cronometroNormal = document.getElementById('cronometroNormal');
+
+    // Elementos del modal
+    const modalOverlay = document.getElementById('modalOverlay');
+    const modalIcon = document.getElementById('modalIcon');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalContent = document.getElementById('modalContent');
+    const modalAcceptBtn = document.getElementById('modalAcceptBtn');
 
     let ultimoAncho = anchoInput.value;
     let ultimoAlto = altoInput.value;
@@ -37,6 +44,67 @@ document.addEventListener('DOMContentLoaded', () => {
     let caminoAnimacion = [];
     let indiceAnimacion = 0;
     let timeoutAnimacion = null;
+
+    let juegoGanado = false;
+    let interaccionDeshabilitada = false;
+
+    // Función para mostrar el modal
+    function mostrarModal(titulo, mensaje, tipo = 'success') {
+        // Configurar el modal según el tipo
+        modalTitle.textContent = titulo;
+        modalContent.textContent = mensaje;
+        
+        // Limpiar clases anteriores
+        modalIcon.className = 'modal-icon';
+        
+        // Añadir clase según el tipo
+        switch(tipo) {
+            case 'success':
+                modalIcon.classList.add('success');
+                modalIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>';
+                break;
+            case 'info':
+                modalIcon.classList.add('info');
+                modalIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+                break;
+            case 'warning':
+                modalIcon.classList.add('warning');
+                modalIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>';
+                break;
+            case 'error':
+                modalIcon.classList.add('error');
+                modalIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+                break;
+        }
+        
+        // Mostrar el modal
+        modalOverlay.classList.add('active');
+        
+        // Enfocar el botón de aceptar para mejor accesibilidad
+        modalAcceptBtn.focus();
+    }
+
+    // Función para ocultar el modal
+    function ocultarModal() {
+        modalOverlay.classList.remove('active');
+    }
+
+    // Configurar evento para el botón de aceptar
+    modalAcceptBtn.addEventListener('click', ocultarModal);
+    
+    // Cerrar modal al hacer clic fuera de él
+    modalOverlay.addEventListener('click', function(event) {
+        if (event.target === modalOverlay) {
+            ocultarModal();
+        }
+    });
+    
+    // Cerrar modal con tecla Escape
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape' && modalOverlay.classList.contains('active')) {
+            ocultarModal();
+        }
+    });
 
     function sincronizarDesdeAncho() {
         if (anclarCheckbox.checked) {
@@ -243,13 +311,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function siguientePaso() {
             if (indiceAnimacion >= caminoAnimacion.length || !animacionActiva) {
-
                 animacionActiva = false;
                 resolviendo = false;
                 actualizarEstadoBotones();
                 detenerCronometro();
                 if (indiceAnimacion >= caminoAnimacion.length) {
-                    alert('¡Solucionado!');
+                    mostrarModal('¡Solucionado!', 'El laberinto ha sido resuelto automáticamente.', 'success');
                 }
                 return;
             }
@@ -483,6 +550,9 @@ document.addEventListener('DOMContentLoaded', () => {
     descargarBtn.addEventListener('click', descargarImagenes);
 
     function generarLaberinto() {
+        juegoGanado = false;
+        interaccionDeshabilitada = false;
+        
         detenerAnimacion();
         
         resolviendo = false;
@@ -561,9 +631,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 celdaDOM.classList.add('celda');
                 celdaDOM.classList.add('muro'); 
                 
+                // Eventos para mouse
                 celdaDOM.addEventListener('mousedown', manejarMouseDown);
                 celdaDOM.addEventListener('mouseenter', manejarMouseEnter);
                 celdaDOM.addEventListener('mouseup', manejarMouseUp);
+                
+                // Eventos para touch (móvil)
+                celdaDOM.addEventListener('touchstart', manejarTouchStart, { passive: false });
+                celdaDOM.addEventListener('touchmove', manejarTouchMove, { passive: false });
+                celdaDOM.addEventListener('touchend', manejarTouchEnd);
                 
                 container.appendChild(celdaDOM);
                 
@@ -607,10 +683,73 @@ document.addEventListener('DOMContentLoaded', () => {
         
         marcarInicioYFin();
         iniciarCeldaInicio();
+        container.classList.remove('laberinto-deshabilitado');
+    }
+    
+    function manejarTouchStart(event) {
+        if (interaccionDeshabilitada || resolviendo) return;
+        
+        event.preventDefault();
+        
+        if (!cronometroActivo) {
+            iniciarCronometro();
+        }
+        
+        const celda = encontrarCeldaDesdeElemento(event.target);
+        if (celda && celda.tipo === 0 && !celda.domElement.classList.contains('muro')) {
+            dibujando = true;
+            
+            if (celda.domElement.classList.contains('inicio')) {
+                return;
+            }
+            
+            if (celda.domElement.classList.contains('usuario')) {
+                deseleccionarCeldaYHijos(celda);
+            } else {
+                if (esCeldaValidaParaUsuario(celda)) {
+                    seleccionarCelda(celda);
+                }
+            }
+        }
+    }
+
+    function manejarTouchMove(event) {
+        if (!dibujando || interaccionDeshabilitada || resolviendo) return;
+        
+        event.preventDefault();
+        
+        const touch = event.touches[0];
+        const elemento = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        if (elemento && elemento.classList.contains('celda')) {
+            const celda = encontrarCeldaDesdeElemento(elemento);
+            if (celda && celda.tipo === 0 && !celda.domElement.classList.contains('muro')) {
+                if (celda.domElement.classList.contains('inicio')) {
+                    return;
+                }
+                
+                if (celda.domElement.classList.contains('usuario')) {
+                    deseleccionarCeldaYHijos(celda);
+                } else {
+                    if (!celda.domElement.classList.contains('usuario') && esCeldaValidaParaUsuario(celda)) {
+                        seleccionarCelda(celda);
+                    }
+                }
+            }
+        }
+    }
+
+    function manejarTouchEnd() {
+        if (interaccionDeshabilitada) return;
+        
+        dibujando = false;
+        if (!juegoGanado) {
+            verificarVictoria();
+        }
     }
 
     function manejarMouseDown(event) {
-        if (resolviendo) return;
+        if (interaccionDeshabilitada || resolviendo) return;
         
         if (!cronometroActivo) {
             iniciarCronometro();
@@ -635,7 +774,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function manejarMouseEnter(event) {
-        if (!dibujando || resolviendo) return;
+        if (interaccionDeshabilitada || !dibujando || resolviendo) return;
         
         const celda = encontrarCeldaDesdeElemento(event.target);
         if (celda && celda.tipo === 0 && !celda.domElement.classList.contains('muro')) {
@@ -654,8 +793,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function manejarMouseUp() {
+        if (interaccionDeshabilitada) return;
+        
         dibujando = false;
-        verificarVictoria();
+        if (!juegoGanado) {
+            verificarVictoria();
+        }
     }
 
     function encontrarCeldaDesdeElemento(elemento) {
@@ -741,11 +884,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function verificarVictoria() {
+        if (juegoGanado || interaccionDeshabilitada) return;
+        
         const fin = matriz[altoTotal - 2][anchoTotal - 2];
         if (fin.usuarioVisitado) {
+            juegoGanado = true;
+            interaccionDeshabilitada = true;
             detenerCronometro();
+            
             setTimeout(() => {
-                alert('¡Felicidades! Has resuelto el laberinto.');
+                mostrarModal('¡Felicidades!', 'Has resuelto el laberinto correctamente.', 'success');
                 dibujando = false;
             }, 100);
         }
@@ -788,7 +936,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function resolverLaberinto() {
-        if (resolviendo) return;
+        if (resolviendo || interaccionDeshabilitada) return;
         resolviendo = true;
         dibujando = false;
         animacionActiva = true;
@@ -810,7 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
             indiceAnimacion = 0;
             animarCamino();
         } else {
-            alert("No se encontró solución.");
+            mostrarModal("Sin solución", "No se encontró una solución para este laberinto.", "warning");
             resolviendo = false;
             animacionActiva = false;
             actualizarEstadoBotones();
@@ -889,7 +1037,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 actualizarEstadoBotones();
                 detenerCronometro();
                 if (indiceAnimacion >= caminoAnimacion.length) {
-                    alert('¡Solucionado!');
+                    juegoGanado = true;
+                    interaccionDeshabilitada = true; // Deshabilitar interacción
+                    mostrarModal('¡Solucionado!', 'El laberinto ha sido resuelto automáticamente.', 'success');
                 }
                 return;
             }
@@ -923,11 +1073,11 @@ document.addEventListener('DOMContentLoaded', () => {
             
             descargarURL(urlNormal, 'laberinto.png');
             
-            alert('¡Imagen descargada correctamente!');
+            mostrarModal('Descarga completada', 'La imagen del laberinto se ha descargado correctamente.', 'info');
             
         } catch (error) {
             console.error('Error al generar imagen:', error);
-            alert('Error al generar la imagen');
+            mostrarModal('Error', 'Ha ocurrido un error al generar la imagen.', 'error');
         } finally {
             descargarBtn.disabled = false;
             descargarBtn.textContent = 'Descargar Imagen';

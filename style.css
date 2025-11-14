@@ -280,6 +280,7 @@ body {
     max-width: 90vw;
     max-height: 70vh;
     position: relative;
+    touch-action: pan-x pan-y; 
 }
 
 .celda {
@@ -287,6 +288,15 @@ body {
     box-sizing: border-box;
     transition: all 0.2s ease;
     border: 1px solid #f1f5f9;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+.celda:not(.muro):active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
 }
 
 .celda.muro {
@@ -514,6 +524,11 @@ body.laberinto-maximizado-active {
 }
 
 @media (max-width: 768px) {
+    .celda {
+        min-width: 15px;
+        min-height: 15px;
+    }
+
     body {
         padding: 10px;
     }
@@ -601,6 +616,11 @@ body.laberinto-maximizado-active {
 }
 
 @media (max-width: 480px) {
+    .celda {
+        min-width: 12px;
+        min-height: 12px;
+    }
+
     .panel-contenido {
         gap: 10px;
     }
@@ -732,4 +752,139 @@ body.laberinto-maximizado-active {
 
 .laberinto-maximizado #laberinto-container .celda {
     flex-shrink: 0;
+}
+
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10001;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal {
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    border: 1px solid var(--border);
+    width: 90%;
+    max-width: 400px;
+    padding: 25px;
+    transform: translateY(-20px);
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.active .modal {
+    transform: translateY(0);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.modal-icon {
+    width: 24px;
+    height: 24px;
+    margin-right: 10px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.modal-icon.success {
+    background-color: var(--secondary);
+}
+
+.modal-icon.info {
+    background-color: var(--primary);
+}
+
+.modal-icon.warning {
+    background-color: #f59e0b;
+}
+
+.modal-icon.error {
+    background-color: var(--danger);
+}
+
+.modal-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.modal-content {
+    margin-bottom: 20px;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.modal-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.modal-btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.modal-btn-primary:hover {
+    background: var(--primary-dark);
+}
+
+.modal-btn-secondary {
+    background: var(--border);
+    color: var(--text);
+}
+
+.modal-btn-secondary:hover {
+    background: #475569;
+}
+
+.laberinto-maximizado-active .modal-overlay {
+    z-index: 10002;
+}
+
+.laberinto-deshabilitado {
+    pointer-events: none;
+    opacity: 0.7;
+    filter: grayscale(0.3);
+}
+
+.laberinto-deshabilitado .celda {
+    cursor: not-allowed;
+}
+
+.laberinto-deshabilitado .celda:not(.muro):hover {
+    filter: none;
+    transform: none;
 }
