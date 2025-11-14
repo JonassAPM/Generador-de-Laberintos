@@ -685,7 +685,7 @@ document.addEventListener('DOMContentLoaded', () => {
         iniciarCeldaInicio();
         container.classList.remove('laberinto-deshabilitado');
     }
-    
+
     function manejarTouchStart(event) {
         if (interaccionDeshabilitada || resolviendo) return;
         
@@ -695,7 +695,9 @@ document.addEventListener('DOMContentLoaded', () => {
             iniciarCronometro();
         }
         
-        const celda = encontrarCeldaDesdeElemento(event.target);
+        const touch = event.touches[0];
+        const celda = encontrarCeldaDesdeCoordenadas(touch.clientX, touch.clientY);
+        
         if (celda && celda.tipo === 0 && !celda.domElement.classList.contains('muro')) {
             dibujando = true;
             
@@ -719,21 +721,18 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         
         const touch = event.touches[0];
-        const elemento = document.elementFromPoint(touch.clientX, touch.clientY);
+        const celda = encontrarCeldaDesdeCoordenadas(touch.clientX, touch.clientY);
         
-        if (elemento && elemento.classList.contains('celda')) {
-            const celda = encontrarCeldaDesdeElemento(elemento);
-            if (celda && celda.tipo === 0 && !celda.domElement.classList.contains('muro')) {
-                if (celda.domElement.classList.contains('inicio')) {
-                    return;
-                }
-                
-                if (celda.domElement.classList.contains('usuario')) {
-                    deseleccionarCeldaYHijos(celda);
-                } else {
-                    if (!celda.domElement.classList.contains('usuario') && esCeldaValidaParaUsuario(celda)) {
-                        seleccionarCelda(celda);
-                    }
+        if (celda && celda.tipo === 0 && !celda.domElement.classList.contains('muro')) {
+            if (celda.domElement.classList.contains('inicio')) {
+                return;
+            }
+            
+            if (celda.domElement.classList.contains('usuario')) {
+                deseleccionarCeldaYHijos(celda);
+            } else {
+                if (!celda.domElement.classList.contains('usuario') && esCeldaValidaParaUsuario(celda)) {
+                    seleccionarCelda(celda);
                 }
             }
         }
@@ -746,6 +745,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!juegoGanado) {
             verificarVictoria();
         }
+    }
+
+    function encontrarCeldaDesdeCoordenadas(x, y) {
+        const rect = container.getBoundingClientRect();
+
+        const relativeX = x - rect.left;
+        const relativeY = y - rect.top;
+
+        const col = Math.floor(relativeX / (rect.width / anchoTotal));
+        const fila = Math.floor(relativeY / (rect.height / altoTotal));
+
+        if (fila >= 0 && fila < altoTotal && col >= 0 && col < anchoTotal) {
+            return matriz[fila][col];
+        }
+        
+        return null;
     }
 
     function manejarMouseDown(event) {
@@ -802,10 +817,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function encontrarCeldaDesdeElemento(elemento) {
-        for (let i = 0; i < altoTotal; i++) {
-            for (let j = 0; j < anchoTotal; j++) {
-                if (matriz[i][j].domElement === elemento) {
-                    return matriz[i][j];
+        if (elemento.classList.contains('celda')) {
+            for (let i = 0; i < altoTotal; i++) {
+                for (let j = 0; j < anchoTotal; j++) {
+                    if (matriz[i][j].domElement === elemento) {
+                        return matriz[i][j];
+                    }
                 }
             }
         }
@@ -1155,5 +1172,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.addEventListener('mouseup', manejarMouseUp);
 
+    document.addEventListener('touchcancel', function() {
+        dibujando = false;
+    });
+
+    document.addEventListener('mouseleave', function() {
+        dibujando = false;
+    });
     generarLaberinto();
 });
